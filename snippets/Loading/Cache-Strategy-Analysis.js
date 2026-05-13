@@ -424,6 +424,15 @@
 
   // --- Phase 7: Console output ---
 
+  if (entries.length === 0) {
+    console.group("%c🔍 Cache Strategy Analysis", "font-weight: bold; font-size: 14px;");
+    console.warn("⚠️ No resources found in the Performance API buffer.");
+    console.log("   This usually means the site called performance.clearResourceTimings() to manage memory.");
+    console.log("   Try: reload the page and run this snippet immediately after load.");
+    console.groupEnd();
+    return { script: "Cache-Strategy-Analysis", status: "no-data", count: 0 };
+  }
+
   const allAntiPatterns = entries.flatMap((e) =>
     e.antiPatterns.map((ap) => ({ ...ap, resource: e.shortName, url: e.url }))
   );
@@ -703,7 +712,7 @@
       "🟡 Replace Expires headers with Cache-Control: max-age — Expires is an outdated mechanism and less reliable."
     );
   }
-  if (cacheEfficiencyPercent < 50) {
+  if (entries.length > 0 && cacheEfficiencyPercent < 50) {
     recommendations.push(
       `🔴 Cache efficiency is low (${cacheEfficiencyPercent}%). Review caching strategy for all static assets.`
     );

@@ -22,5 +22,8 @@
   },
   "CLI": {
     "title": "CLI"
+  },
+  "visualizer": {
+    "title": "Visualizer"
   }
 }

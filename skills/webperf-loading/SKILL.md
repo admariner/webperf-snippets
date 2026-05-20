@@ -17,10 +17,10 @@ JavaScript snippets for measuring web performance in Chrome DevTools. Execute wi
 
 ## Scripts
 
-- `scripts/Back-Forward-Cache.js` — Back/Forward Cache (bfcache)
+- `scripts/Back-Forward-Cache.js` — Back Forward Cache
 - `scripts/CSS-Media-Queries-Analysis.js` — CSS Media Queries Analysis
 - `scripts/Cache-Strategy-Analysis.js` — Cache Strategy Analysis
-- `scripts/Client-Side-Redirect-Detection.js` — Client-Side Redirect Detection
+- `scripts/Client-Side-Redirect-Detection.js` — Client Side Redirect Detection
 - `scripts/Content-Visibility.js` — Content Visibility
 - `scripts/Critical-CSS-Detection.js` — Critical CSS Detection
 - `scripts/Event-Processing-Time.js` — Event Processing Time
@@ -45,7 +45,7 @@ JavaScript snippets for measuring web performance in Chrome DevTools. Execute wi
 - `scripts/TTFB-Resources.js` — Time To First Byte: Measure TTFB for all resources
 - `scripts/TTFB-Sub-Parts.js` — Time To First Byte: Measure TTFB sub-parts
 - `scripts/TTFB.js` — Time To First Byte: Measure the time to first byte
-- `scripts/Validate-Preload-Async-Defer-Scripts.js` — Validate Preload on Async/Defer Scripts
+- `scripts/Validate-Preload-Async-Defer-Scripts.js` — Validate Preload Async Defer Scripts
 
 
 ## Common Workflows

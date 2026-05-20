@@ -70,7 +70,6 @@
     status: "error",
     error: "No LCP entries buffered"
   };
-  printLCP(lastLcpEntry);
   const lcpActivationStart = getActivationStart();
   const lcpValue = Math.round(Math.max(0, lastLcpEntry.startTime - lcpActivationStart));
   const lcpRating = valueToRating(lcpValue);

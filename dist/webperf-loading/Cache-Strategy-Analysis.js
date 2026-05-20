@@ -262,6 +262,13 @@
   });
   const costlyDuplicates = uniqueDuplicates.filter(d => d.costly);
   const cachedDuplicates = uniqueDuplicates.filter(d => !d.costly);
+  if (entries.length === 0) {
+    return {
+      script: "Cache-Strategy-Analysis",
+      status: "no-data",
+      count: 0
+    };
+  }
   const allAntiPatterns = entries.flatMap(e => e.antiPatterns.map(ap => ({
     ...ap,
     resource: e.shortName,
@@ -321,7 +328,7 @@
   if (noCacheEntries.filter(e => isStaticAsset(e.type)).length > 0) recommendations.push("🔴 Add Cache-Control headers to static assets (JS, CSS, fonts, images). Start with max-age=86400 and move to immutable for versioned files.");
   if (shortCacheEntries.filter(e => e.hasHash).length > 0) recommendations.push("🟡 Versioned files (with content hash) should use long cache or Cache-Control: immutable — they can be cached indefinitely since the URL changes on update.");
   if (allAntiPatterns.some(p => p.id === "expires-without-cc")) recommendations.push("🟡 Replace Expires headers with Cache-Control: max-age — Expires is an outdated mechanism and less reliable.");
-  if (cacheEfficiencyPercent < 50) recommendations.push(`🔴 Cache efficiency is low (${cacheEfficiencyPercent}%). Review caching strategy for all static assets.`);
+  if (entries.length > 0 && cacheEfficiencyPercent < 50) recommendations.push(`🔴 Cache efficiency is low (${cacheEfficiencyPercent}%). Review caching strategy for all static assets.`);
   if (cdnHitRate !== null && cdnHitRate < 70) recommendations.push(`🟡 CDN hit rate is ${cdnHitRate}%. Check CDN cache rules and ensure static assets have appropriate TTLs.`);
   if (protocolDistribution["http/1.1"] > 0) recommendations.push(`🟡 ${protocolDistribution["http/1.1"]} resources still use HTTP/1.1. Consider upgrading to HTTP/2 for better multiplexing.`);
   if (uncompressedResources.length > 0) recommendations.push(`🟡 ${uncompressedResources.length} text resources appear uncompressed. Enable Brotli or gzip compression on your server.`);

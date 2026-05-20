@@ -19,16 +19,16 @@
       size: entry.transferSize || 0
     };
   }).sort((a, b) => b.responseEnd - a.responseEnd);
+  const lastBlockingEnd = blockingResources.length ? Math.max(...blockingResources.map(r => r.responseEnd)) : 0;
+  const totalSizeBytes = blockingResources.reduce((sum, r) => sum + r.size, 0);
+  const byType = blockingResources.reduce((acc, r) => {
+    acc[r.type] = (acc[r.type] || 0) + 1;
+    return acc;
+  }, {});
   if (blockingResources.length === 0) {
   } else {
-    const lastBlockingEnd = Math.max(...blockingResources.map(r => r.responseEnd));
-    const totalSize = blockingResources.reduce((sum, r) => sum + r.size, 0);
-    const byType = blockingResources.reduce((acc, r) => {
-      acc[r.type] = (acc[r.type] || 0) + 1;
-      return acc;
-    }, {});
-    if (totalSize > 0) {
-      (totalSize / 1024).toFixed(1);
+    if (totalSizeBytes > 0) {
+      (totalSizeBytes / 1024).toFixed(1);
     }
     const formatBar = (end, max) => {
       const pct = end / max * 100;
@@ -53,12 +53,6 @@
     if (byType.font) {
     }
   }
-  const lastBlockingEnd = blockingResources.length ? Math.max(...blockingResources.map(r => r.responseEnd)) : 0;
-  const totalSizeBytes = blockingResources.reduce((sum, r) => sum + r.size, 0);
-  const byType = blockingResources.reduce((acc, r) => {
-    acc[r.type] = (acc[r.type] || 0) + 1;
-    return acc;
-  }, {});
   return {
     script: "Find-render-blocking-resources",
     status: "ok",
@@ -75,6 +69,10 @@
       responseEndMs: Math.round(r.responseEnd),
       durationMs: Math.round(r.duration),
       sizeBytes: r.size
-    }))
+    })),
+    issues: blockingResources.length > 0 ? [ {
+      severity: "error",
+      message: `${blockingResources.length} render-blocking resource(s) delay rendering until ${Math.round(lastBlockingEnd)}ms`
+    } ] : []
   };
 })();

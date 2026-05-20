@@ -1,7 +1,5 @@
 ---
-## Back/Forward Cache (bfcache)
-
-Analyzes Back/Forward Cache (bfcache) to determine if your page is eligible for instant back/forward navigations. When bfcache works, users get instant (0ms) page loads when using browser back/forward buttons, dramatically improving perceived performance.
+## Back Forward Cache
 
 **Script:** `scripts/Back-Forward-Cache.js`
 ---
@@ -13,23 +11,11 @@ Analyze all @media rules in CSS stylesheets to identify classes and properties t
 ---
 ## Cache Strategy Analysis
 
-Audits HTTP caching strategies across all page resources, identifying resources without cache, short-lived cache configurations, cache anti-patterns, and CDN cache hit rates. Provides a cache efficiency score and actionable recommendations.
-
 **Script:** `scripts/Cache-Strategy-Analysis.js`
 ---
-## Client-Side Redirect Detection
-
-Detects client-side redirects that add unnecessary latency to page load and impact Core Web Vitals, particularly LCP. Client-side redirects implemented via JavaScript or SPA routers can add seconds to the critical rendering path, yet they're often invisible to standard monitoring tools.
+## Client Side Redirect Detection
 
 **Script:** `scripts/Client-Side-Redirect-Detection.js`
-
-**Thresholds:**
-
-| Impact Level | Overhead | Rating | Action |
-|--------------|----------|--------|--------|
-| **CRITICAL** | &gt; 3000ms | 🔴 | Fix immediately - major LCP issue |
-| **MODERATE** | 1000-3000ms | 🟡 | High priority - noticeable delay |
-| **LOW** | &lt; 1000ms | 🟢 | Monitor - may be acceptable for SPAs |
 ---
 ## Content Visibility
 
@@ -89,8 +75,6 @@ Identifies resources that block the browser from rendering the page. These resou
 ---
 ## First And Third Party Script Info
 
-Analyzes all scripts loaded on the page, separating them into first-party (your domain) and third-party (external) scripts. This helps identify the performance impact of external dependencies.
-
 **Script:** `scripts/First-And-Third-Party-Script-Info.js`
 ---
 ## First And Third Party Script Timings
@@ -145,8 +129,6 @@ Audits all fetchpriority attribute usage across the page — covering non-image 
 ---
 ## Resource Hints Validation
 
-Validates resource hints (preload, preconnect, dns-prefetch) by analyzing which hints are declared and whether the resources or connections are actually used. Detects unused hints that waste browser resources and opportunities to optimize loading.
-
 **Script:** `scripts/Resource-Hints-Validation.js`
 ---
 ## Resource Hints
@@ -199,8 +181,6 @@ Time to First Byte (TTFB) measures the time from when the user starts navigating
 
 **Script:** `scripts/TTFB.js`
 ---
-## Validate Preload on Async/Defer Scripts
-
-Detects preload resource hints for scripts that use async or defer attributes. This is an anti-pattern that wastes bandwidth and can hurt performance by artificially elevating the priority of resources that should load at lower priority.
+## Validate Preload Async Defer Scripts
 
 **Script:** `scripts/Validate-Preload-Async-Defer-Scripts.js`

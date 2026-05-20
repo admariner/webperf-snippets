@@ -123,6 +123,12 @@
       style: f.style,
       display: f.display
     })),
+    usedFonts: usedFonts.map(f => ({
+      family: f.family,
+      weight: f.weight,
+      style: f.style,
+      elements: f.elements
+    })),
     issues: [ ...preloadedNotUsed.map(f => ({
       severity: "warning",
       message: `Preloaded but not used above fold: ${f.name}`

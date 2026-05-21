@@ -19,6 +19,7 @@ const CATEGORY_SKILLS = {
 }
 
 const ROOT_EDITORIAL_PAGES = new Set(['index'])
+const NON_SNIPPET_PAGE_TYPES = new Set(['guide', 'tool'])
 
 function readFile(filePath) {
   return fs.readFileSync(filePath, 'utf8')
@@ -81,17 +82,12 @@ function getCategoryPages(category) {
 function verifySourceToPageMapping(errors) {
   for (const category of Object.keys(CATEGORY_SKILLS)) {
     for (const snippetFile of getSnippetFiles(category)) {
-      let found = false
-
-      for (const mdxFile of getCategoryPages(category)) {
+      const isImported = getCategoryPages(category).some((mdxFile) => {
         const content = readFile(path.join(PAGES_DIR, category, mdxFile))
-        if (content.includes(`/snippets/${category}/${snippetFile}?raw`)) {
-          found = true
-          break
-        }
-      }
+        return content.includes(`/snippets/${category}/${snippetFile}?raw`)
+      })
 
-      if (!found) {
+      if (!isImported) {
         errors.push(`Missing MDX page import for snippet ${category}/${snippetFile}`)
       }
     }
@@ -106,10 +102,10 @@ function verifyPageToSourceMapping(errors) {
     const content = readFile(path.join(PAGES_DIR, rootPage))
     const frontmatter = parseFrontmatter(content)
 
-    if (frontmatter.type === 'guide') continue
+    if (NON_SNIPPET_PAGE_TYPES.has(frontmatter.type)) continue
 
     if (getSnippetImports(content).length === 0) {
-      errors.push(`Root page ${rootPage} has no snippet import and is not marked with type: guide`)
+      errors.push(`Root page ${rootPage} has no snippet import and is not marked with type: guide or type: tool`)
     }
   }
 
@@ -121,11 +117,11 @@ function verifyPageToSourceMapping(errors) {
       const content = readFile(path.join(PAGES_DIR, category, mdxFile))
       const frontmatter = parseFrontmatter(content)
 
-      if (frontmatter.type === 'guide') continue
+      if (NON_SNIPPET_PAGE_TYPES.has(frontmatter.type)) continue
 
       const imports = getSnippetImports(content)
       if (imports.length === 0) {
-        errors.push(`Page ${category}/${mdxFile} has no snippet import and is not marked with type: guide`)
+        errors.push(`Page ${category}/${mdxFile} has no snippet import and is not marked with type: guide or type: tool`)
         continue
       }
 

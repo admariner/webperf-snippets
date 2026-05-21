@@ -1589,8 +1589,6 @@ Quick check for Largest Contentful Paint, a Core Web Vital that measures loading
     return { script: "LCP", status: "error", error: "No LCP entries buffered" };
   }
 
-  printLCP(lastLcpEntry);
-
   const lcpActivationStart = getActivationStart();
   const lcpValue = Math.round(Math.max(0, lastLcpEntry.startTime - lcpActivationStart));
   const lcpRating = valueToRating(lcpValue);
@@ -3068,6 +3066,15 @@ Audits HTTP caching strategies across all page resources, identifying resources 
 
   // --- Phase 7: Console output ---
 
+  if (entries.length === 0) {
+    console.group("%c🔍 Cache Strategy Analysis", "font-weight: bold; font-size: 14px;");
+    console.warn("⚠️ No resources found in the Performance API buffer.");
+    console.log("   This usually means the site called performance.clearResourceTimings() to manage memory.");
+    console.log("   Try: reload the page and run this snippet immediately after load.");
+    console.groupEnd();
+    return { script: "Cache-Strategy-Analysis", status: "no-data", count: 0 };
+  }
+
   const allAntiPatterns = entries.flatMap((e) =>
     e.antiPatterns.map((ap) => ({ ...ap, resource: e.shortName, url: e.url }))
   );
@@ -3347,7 +3354,7 @@ Audits HTTP caching strategies across all page resources, identifying resources 
       "🟡 Replace Expires headers with Cache-Control: max-age — Expires is an outdated mechanism and less reliable."
     );
   }
-  if (cacheEfficiencyPercent < 50) {
+  if (entries.length > 0 && cacheEfficiencyPercent < 50) {
     recommendations.push(
       `🔴 Cache efficiency is low (${cacheEfficiencyPercent}%). Review caching strategy for all static assets.`
     );
@@ -5554,7 +5561,7 @@ Identifies images that are loaded eagerly but not visible in the initial viewpor
 ## Find render-blocking resources
 URL: https://webperf-snippets.nucliweb.net/Loading/Find-render-blocking-resources
 
-Identifies resources that block the browser from rendering the page. These resources must be fully downloaded and processed before the browser can display any content, directly impacting First Contentful Paint (FCP) and Largest Contentful Paint (LCP). Why this matters: Render-blocking resources are the primary cause of slow initial page renders. Users see a blank white screen while CSS and JavaScript files download and parse. On slow connections or mobile networks, this can add several seconds to your load time. Eliminating or deferring render-blocking resources is one of the highest-impact optimizations you can make. What are render-blocking resources?
+Identifies resources that block the browser from rendering the page. These resources must be fully downloaded and processed before the browser can display any content, directly impacting First Contentful Paint (FCP) and Largest Contentful Paint (LCP). Render-blocking resources are the primary cause of slow initial page renders. Users see a blank white screen while CSS and JavaScript files download and parse. On slow connections or mobile networks, this can add several seconds to your load time. Eliminating or deferring render-blocking resources is one of the highest-impact optimizations you can make.
 
 ```js
 // Find render-blocking resources
@@ -5590,6 +5597,15 @@ Identifies resources that block the browser from rendering the page. These resou
     })
     .sort((a, b) => b.responseEnd - a.responseEnd);
 
+  const lastBlockingEnd = blockingResources.length
+    ? Math.max(...blockingResources.map((r) => r.responseEnd))
+    : 0;
+  const totalSizeBytes = blockingResources.reduce((sum, r) => sum + r.size, 0);
+  const byType = blockingResources.reduce((acc, r) => {
+    acc[r.type] = (acc[r.type] || 0) + 1;
+    return acc;
+  }, {});
+
   console.group("%c🚧 Render-Blocking Resources", "font-weight: bold; font-size: 14px;");
 
   if (blockingResources.length === 0) {
@@ -5604,14 +5620,6 @@ Identifies resources that block the browser from rendering the page. These resou
     console.log("   • Scripts use async or defer attributes");
     console.log("   • Critical resources are optimized");
   } else {
-    // Calculate metrics
-    const lastBlockingEnd = Math.max(...blockingResources.map((r) => r.responseEnd));
-    const totalSize = blockingResources.reduce((sum, r) => sum + r.size, 0);
-    const byType = blockingResources.reduce((acc, r) => {
-      acc[r.type] = (acc[r.type] || 0) + 1;
-      return acc;
-    }, {});
-
     // Summary
     console.log(
       `%c⚠️ Found ${blockingResources.length} render-blocking resource(s)`,
@@ -5622,8 +5630,8 @@ Identifies resources that block the browser from rendering the page. These resou
     console.log("%c📊 Impact Summary:", "font-weight: bold;");
     console.log(`   Rendering blocked until: ${lastBlockingEnd.toFixed(0)}ms`);
     console.log(`   Total blocking resources: ${blockingResources.length}`);
-    if (totalSize > 0) {
-      const sizeKB = (totalSize / 1024).toFixed(1);
+    if (totalSizeBytes > 0) {
+      const sizeKB = (totalSizeBytes / 1024).toFixed(1);
       console.log(`   Total size: ${sizeKB} KB`);
     }
     console.log(`   By type: ${Object.entries(byType).map(([k, v]) => `${k} (${v})`).join(", ")}`);
@@ -5693,9 +5701,6 @@ Identifies resources that block the browser from rendering the page. These resou
 
   console.groupEnd();
 
-  const lastBlockingEnd = blockingResources.length ? Math.max(...blockingResources.map((r) => r.responseEnd)) : 0;
-  const totalSizeBytes = blockingResources.reduce((sum, r) => sum + r.size, 0);
-  const byType = blockingResources.reduce((acc, r) => { acc[r.type] = (acc[r.type] || 0) + 1; return acc; }, {});
   return {
     script: "Find-render-blocking-resources",
     status: "ok",

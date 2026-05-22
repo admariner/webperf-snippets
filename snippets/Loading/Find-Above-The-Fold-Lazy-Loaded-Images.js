@@ -246,7 +246,7 @@
       selector: image.selector,
       lazyType: image.lazyType,
       dimensions: image.dimensions,
-      position: image.position,
+      position: `${image.position.top}px, ${image.position.left}px`,
       distanceFromEdge: image.distanceFromEdge,
       src: image.src,
       srcset: image.srcset,

@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /**
- * Generates skill.md files from /snippets/ JS files + /pages/ MDX documentation.
- * Output: /skills/webperf-{category}/skill.md + scripts/*.js
- *         /dist/webperf-{category}/*.js  (readable, no console, no headers — for external repos)
+ * Generates skill files from /snippets/ JS files + /pages/ MDX documentation.
+ * Output: /skills/webperf-{category}/SKILL.md + scripts/*.js   (Claude Code)
+ *         /dist/webperf-{category}/*.js                         (readable scripts)
+ *         /dist/gemini/webperf-{category}/webperf-{category}.toml + scripts/  (Gemini CLI)
+ *         /dist/antigravity/webperf-{category}/SKILL.md + scripts/ + references/  (Antigravity)
  *
  * Run: node scripts/generate-skills.js
  */
@@ -20,6 +22,8 @@ const PAGES_DIR = path.join(ROOT, 'pages')
 const SKILLS_DIR = path.join(ROOT, 'skills')
 const CLAUDE_SKILLS_DIR = path.join(ROOT, '.claude', 'skills')
 const DIST_DIR = path.join(ROOT, 'dist')
+const GEMINI_DIST_DIR = path.join(ROOT, 'dist', 'gemini')
+const ANTIGRAVITY_DIST_DIR = path.join(ROOT, 'dist', 'antigravity')
 
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'))
 
@@ -40,30 +44,65 @@ const CATEGORIES = {
     name: 'Core Web Vitals',
     description:
       'Intelligent Core Web Vitals analysis with automated workflows and decision trees. Measures LCP, CLS, INP with guided debugging that automatically determines follow-up analysis based on results. Includes workflows for LCP deep dive (5 phases), CLS investigation (loading vs interaction), INP debugging (latency breakdown + attribution), and cross-skill integration with loading, interaction, and media skills. Use when the user asks about Core Web Vitals, LCP optimization, layout shifts, or interaction responsiveness. Compatible with Chrome DevTools MCP.',
+    antigravity: {
+      kind: 'subagent',
+      model: 'gemini-2.5-pro',
+      temperature: 0.2,
+      max_turns: 25,
+      tools: ['mcp_chrome-devtools/*', 'view_file'],
+    },
   },
   Loading: {
     skill: 'webperf-loading',
     name: 'Loading Performance',
     description:
       'Intelligent loading performance analysis with automated workflows for TTFB investigation (DNS/connection/server breakdown), render-blocking detection, script performance deep dive (first vs third-party attribution), font optimization, and resource hints validation. Includes decision trees that automatically analyze TTFB sub-parts when slow, detect script loading anti-patterns (async/defer/preload conflicts), identify render-blocking resources, and validate resource hints usage. Features workflows for complete loading audit (6 phases), backend performance investigation, and priority optimization. Cross-skill integration with Core Web Vitals (LCP resource loading), Interaction (script execution blocking), and Media (lazy loading strategy). Use when the user asks about TTFB, FCP, render-blocking, slow loading, font performance, script optimization, or resource hints. Compatible with Chrome DevTools MCP.',
+    antigravity: {
+      kind: 'subagent',
+      model: 'gemini-2.5-pro',
+      temperature: 0.2,
+      max_turns: 30,
+      tools: ['mcp_chrome-devtools/*', 'view_file'],
+    },
   },
   Interaction: {
     skill: 'webperf-interaction',
     name: 'Interaction & Animation',
     description:
       'Intelligent interaction performance analysis with automated workflows for INP debugging, scroll jank investigation, and main thread blocking. Includes decision trees that automatically run script attribution when long frames detected, break down input latency phases, and correlate layout shifts with interactions. Features workflows for complete interaction audit, third-party script impact analysis, and animation performance debugging. Cross-skill integration with Core Web Vitals (INP/CLS correlation) and Loading (script execution analysis). Use when the user asks about slow interactions, janky scrolling, unresponsive pages, or INP optimization. Compatible with Chrome DevTools MCP.',
+    antigravity: {
+      kind: 'subagent',
+      model: 'gemini-2.5-pro',
+      temperature: 0.2,
+      max_turns: 20,
+      tools: ['mcp_chrome-devtools/*', 'view_file'],
+    },
   },
   Media: {
     skill: 'webperf-media',
     name: 'Media Performance',
     description:
       'Intelligent media optimization with automated workflows for images, videos, and SVGs. Includes decision trees that detect LCP images (triggers format/lazy-loading/priority analysis), identify layout shift risks (missing dimensions), and flag lazy loading issues (above-fold lazy or below-fold eager). Features workflows for complete media audit, LCP image investigation, video performance (poster optimization), and SVG embedded bitmap detection. Cross-skill integration with Core Web Vitals (LCP/CLS impact) and Loading (priority hints, resource preloading). Provides performance budgets and format recommendations based on content type. Use when the user asks about image optimization, LCP is an image/video, layout shifts from media, or media loading strategy. Compatible with Chrome DevTools MCP.',
+    antigravity: {
+      kind: 'subagent',
+      model: 'gemini-2.5-pro',
+      temperature: 0.2,
+      max_turns: 15,
+      tools: ['mcp_chrome-devtools/*', 'view_file'],
+    },
   },
   Resources: {
     skill: 'webperf-resources',
     name: 'Resources & Network',
     description:
       'Intelligent network quality analysis with adaptive loading strategies. Detects connection type (2g/3g/4g), bandwidth, RTT, and save-data mode, then automatically triggers appropriate optimization workflows. Includes decision trees that recommend image compression for slow connections, critical CSS inlining for high RTT, and save-data optimizations (disable autoplay, reduce quality). Features connection-aware performance budgets (500KB for 2g, 1.5MB for 3g, 3MB for 4g+) and adaptive loading implementation guides. Cross-skill integration with Loading (TTFB impact), Media (responsive images), and Core Web Vitals (connection impact on LCP/INP). Use when the user asks about slow connections, mobile optimization, save-data support, or adaptive loading strategies. Compatible with Chrome DevTools MCP.',
+    antigravity: {
+      kind: 'subagent',
+      model: 'gemini-2.5-flash',
+      temperature: 0.2,
+      max_turns: 10,
+      tools: ['mcp_chrome-devtools/*', 'view_file'],
+    },
   },
 }
 
@@ -255,6 +294,59 @@ function buildSnippetMeta(category, snippetFile) {
   }
 }
 
+function buildGeminiTomlContent(catConfig, bodyLines, metas) {
+  const desc = catConfig.description.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+
+  const refIdx = bodyLines.indexOf('## References')
+  const baseLines = refIdx !== -1 ? bodyLines.slice(0, refIdx) : bodyLines
+
+  const snippetDetails = []
+  for (const meta of metas) {
+    snippetDetails.push('---')
+    snippetDetails.push(`### ${meta.title}`)
+    if (meta.description) {
+      snippetDetails.push('')
+      snippetDetails.push(meta.description)
+    }
+    snippetDetails.push('')
+    snippetDetails.push(`**Script:** \`scripts/${meta.basename}.js\``)
+    if (meta.thresholds) {
+      snippetDetails.push('')
+      snippetDetails.push('**Thresholds:**')
+      snippetDetails.push('')
+      snippetDetails.push(meta.thresholds)
+    }
+  }
+
+  const body = [...baseLines, '## Snippet Details', '', ...snippetDetails]
+    .join('\n')
+    .trim()
+    .replace(/"""/g, '\\"\\"\\"')
+
+  return `description = "${desc}"\n\nprompt = """\n${body}\n"""\n`
+}
+
+function buildAntigravitySkillContent(catConfig, bodyLines) {
+  const ag = catConfig.antigravity
+  const frontmatter = [
+    '---',
+    `name: ${catConfig.skill}`,
+    `description: ${catConfig.description}`,
+    `kind: ${ag.kind}`,
+    `model: ${ag.model}`,
+    `temperature: ${ag.temperature}`,
+    `max_turns: ${ag.max_turns}`,
+    'tools:',
+    ...ag.tools.map((t) => `  - ${t}`),
+    `license: ${SKILL_METADATA.license}`,
+    'metadata:',
+    ...Object.entries(SKILL_METADATA.metadata).map(([k, v]) => `  ${k}: ${v}`),
+    '---',
+    '',
+  ]
+  return [...frontmatter, ...bodyLines].join('\n')
+}
+
 async function generateCategorySkill(category, catConfig) {
   const snippetFiles = getSnippetFiles(category)
   if (snippetFiles.length === 0) return
@@ -306,54 +398,76 @@ async function generateCategorySkill(category, catConfig) {
     console.log(`  copied: references/schema.md`)
   }
 
-  const lines = []
-
-  lines.push('---')
-  lines.push(`name: ${catConfig.skill}`)
-  lines.push(`description: ${catConfig.description}`)
-  lines.push('context: fork')
-  lines.push(`license: ${SKILL_METADATA.license}`)
-  lines.push('metadata:')
-  for (const [key, value] of Object.entries(SKILL_METADATA.metadata)) {
-    lines.push(`  ${key}: ${value}`)
-  }
-  lines.push('---')
-  lines.push('')
-  lines.push(`# WebPerf: ${catConfig.name}`)
-  lines.push('')
-  lines.push(
+  const bodyLines = []
+  bodyLines.push(`# WebPerf: ${catConfig.name}`)
+  bodyLines.push('')
+  bodyLines.push(
     'JavaScript snippets for measuring web performance in Chrome DevTools. ' +
     'Execute with `mcp__chrome-devtools__evaluate_script`, capture output with `mcp__chrome-devtools__get_console_message`.'
   )
-  lines.push('')
-
-  // Compact script list (replaces truncated table)
-  lines.push('## Scripts')
-  lines.push('')
+  bodyLines.push('')
+  bodyLines.push('## Scripts')
+  bodyLines.push('')
   for (const meta of metas) {
-    lines.push(`- \`scripts/${meta.basename}.js\` — ${meta.title}`)
+    bodyLines.push(`- \`scripts/${meta.basename}.js\` — ${meta.title}`)
   }
-  lines.push('')
-  lines.push('')
+  bodyLines.push('')
+  bodyLines.push('')
 
-  // Inject WORKFLOWS.md if exists (no trailing --- to avoid double separator)
   const workflowsPath = path.join(SNIPPETS_DIR, category, 'WORKFLOWS.md')
   if (fs.existsSync(workflowsPath)) {
     const workflowsContent = fs.readFileSync(workflowsPath, 'utf-8').trim()
-    lines.push(workflowsContent)
-    lines.push('')
+    bodyLines.push(workflowsContent)
+    bodyLines.push('')
     console.log(`  injected WORKFLOWS.md`)
   }
 
-  lines.push('## References')
-  lines.push('')
-  lines.push('- `references/snippets.md` — Descriptions and thresholds for each script')
-  lines.push('- `references/schema.md` — Return value schema for interpreting script output')
+  bodyLines.push('## References')
+  bodyLines.push('')
+  bodyLines.push('- `references/snippets.md` — Descriptions and thresholds for each script')
+  bodyLines.push('- `references/schema.md` — Return value schema for interpreting script output')
 
-  const skillContent = lines.join('\n')
+  // Claude Code SKILL.md
+  const frontmatterLines = [
+    '---',
+    `name: ${catConfig.skill}`,
+    `description: ${catConfig.description}`,
+    'context: fork',
+    `license: ${SKILL_METADATA.license}`,
+    'metadata:',
+    ...Object.entries(SKILL_METADATA.metadata).map(([k, v]) => `  ${k}: ${v}`),
+    '---',
+    '',
+  ]
+  const skillContent = [...frontmatterLines, ...bodyLines].join('\n')
   const skillPath = path.join(skillDir, 'SKILL.md')
   fs.writeFileSync(skillPath, skillContent)
   console.log(`  written: SKILL.md (${Math.round(skillContent.length / 1024)}KB)`)
+
+  // Gemini CLI
+  const geminiDir = path.join(GEMINI_DIST_DIR, catConfig.skill)
+  fs.mkdirSync(path.join(geminiDir, 'scripts'), { recursive: true })
+  for (const f of snippetFiles) {
+    fs.copyFileSync(path.join(distDir, f), path.join(geminiDir, 'scripts', f))
+  }
+  fs.writeFileSync(path.join(geminiDir, `${catConfig.skill}.toml`), buildGeminiTomlContent(catConfig, bodyLines, metas))
+  console.log(`  written: dist/gemini/${catConfig.skill}/ (${snippetFiles.length} scripts + .toml)`)
+
+  // Antigravity
+  const antigravityDir = path.join(ANTIGRAVITY_DIST_DIR, catConfig.skill)
+  const antigravityScriptsDir = path.join(antigravityDir, 'scripts')
+  const antigravityRefsDir = path.join(antigravityDir, 'references')
+  fs.mkdirSync(antigravityScriptsDir, { recursive: true })
+  fs.mkdirSync(antigravityRefsDir, { recursive: true })
+  for (const f of snippetFiles) {
+    fs.copyFileSync(path.join(distDir, f), path.join(antigravityScriptsDir, f))
+  }
+  fs.copyFileSync(path.join(refsDir, 'snippets.md'), path.join(antigravityRefsDir, 'snippets.md'))
+  if (fs.existsSync(path.join(refsDir, 'schema.md'))) {
+    fs.copyFileSync(path.join(refsDir, 'schema.md'), path.join(antigravityRefsDir, 'schema.md'))
+  }
+  fs.writeFileSync(path.join(antigravityDir, 'SKILL.md'), buildAntigravitySkillContent(catConfig, bodyLines))
+  console.log(`  written: dist/antigravity/${catConfig.skill}/ (${snippetFiles.length} scripts + references + SKILL.md)`)
 }
 
 function generateMetaSkill() {
@@ -366,55 +480,87 @@ function generateMetaSkill() {
     (sum, cat) => sum + getSnippetFiles(cat).length, 0
   )
 
-  const lines = []
+  const metaDesc = 'Web performance measurement and debugging toolkit. Use when the user asks about web performance, wants to audit a page, or says "analyze performance", "debug lcp", "check ttfb", "measure core web vitals", "audit images", or similar.'
 
-  lines.push('---')
-  lines.push('name: webperf')
-  lines.push(
-    'description: Web performance measurement and debugging toolkit. Use when the user asks about web performance, wants to audit a page, or says "analyze performance", "debug lcp", "check ttfb", "measure core web vitals", "audit images", or similar.'
-  )
-  lines.push('context: fork')
-  lines.push(`license: ${SKILL_METADATA.license}`)
-  lines.push('metadata:')
-  for (const [key, value] of Object.entries(SKILL_METADATA.metadata)) {
-    lines.push(`  ${key}: ${value}`)
-  }
-  lines.push('---')
-  lines.push('')
-  lines.push('# WebPerf Snippets Toolkit')
-  lines.push('')
-  lines.push(
+  const bodyLines = []
+  bodyLines.push('# WebPerf Snippets Toolkit')
+  bodyLines.push('')
+  bodyLines.push(
     `A collection of ${totalSnippets} JavaScript snippets for measuring and debugging web performance in Chrome DevTools. ` +
     'Each snippet runs in the browser console and outputs structured, color-coded results.'
   )
-  lines.push('')
+  bodyLines.push('')
+  bodyLines.push('## Quick Reference')
+  bodyLines.push('')
+  bodyLines.push('| Skill | Snippets | Trigger phrases |')
+  bodyLines.push('|-------|----------|-----------------|')
+  bodyLines.push(`| webperf-core-web-vitals | ${getSnippetFiles('CoreWebVitals').length} | "debug LCP", "slow LCP", "CLS", "layout shifts", "INP", "interaction latency", "responsiveness" |`)
+  bodyLines.push(`| webperf-loading | ${getSnippetFiles('Loading').length} | "TTFB", "slow server", "FCP", "render blocking", "font loading", "script loading", "resource hints", "service worker" |`)
+  bodyLines.push(`| webperf-interaction | ${getSnippetFiles('Interaction').length} | "jank", "scroll performance", "long tasks", "animation frames", "INP debug" |`)
+  bodyLines.push(`| webperf-media | ${getSnippetFiles('Media').length} | "image audit", "lazy loading", "image optimization", "video audit" |`)
+  bodyLines.push(`| webperf-resources | ${getSnippetFiles('Resources').length} | "network quality", "bandwidth", "connection type", "save-data" |`)
+  bodyLines.push('')
+  bodyLines.push('## Workflow')
+  bodyLines.push('')
+  bodyLines.push("1. Identify the relevant skill based on the user's question (see Quick Reference above)")
+  bodyLines.push("2. Load the skill's skill.md to see available snippets and thresholds")
+  bodyLines.push('3. Execute with Chrome DevTools MCP:')
+  bodyLines.push('   - `mcp__chrome-devtools__navigate_page` → navigate to target URL')
+  bodyLines.push('   - `mcp__chrome-devtools__evaluate_script` → run the snippet')
+  bodyLines.push('   - `mcp__chrome-devtools__get_console_message` → read results')
+  bodyLines.push('4. Interpret results using the thresholds defined in the skill')
+  bodyLines.push('5. Provide actionable recommendations based on findings')
+  bodyLines.push('')
 
-  lines.push('## Quick Reference')
-  lines.push('')
-  lines.push('| Skill | Snippets | Trigger phrases |')
-  lines.push('|-------|----------|-----------------|')
-  lines.push(`| webperf-core-web-vitals | ${getSnippetFiles('CoreWebVitals').length} | "debug LCP", "slow LCP", "CLS", "layout shifts", "INP", "interaction latency", "responsiveness" |`)
-  lines.push(`| webperf-loading | ${getSnippetFiles('Loading').length} | "TTFB", "slow server", "FCP", "render blocking", "font loading", "script loading", "resource hints", "service worker" |`)
-  lines.push(`| webperf-interaction | ${getSnippetFiles('Interaction').length} | "jank", "scroll performance", "long tasks", "animation frames", "INP debug" |`)
-  lines.push(`| webperf-media | ${getSnippetFiles('Media').length} | "image audit", "lazy loading", "image optimization", "video audit" |`)
-  lines.push(`| webperf-resources | ${getSnippetFiles('Resources').length} | "network quality", "bandwidth", "connection type", "save-data" |`)
-  lines.push('')
-
-  lines.push('## Workflow')
-  lines.push('')
-  lines.push('1. Identify the relevant skill based on the user\'s question (see Quick Reference above)')
-  lines.push('2. Load the skill\'s skill.md to see available snippets and thresholds')
-  lines.push('3. Execute with Chrome DevTools MCP:')
-  lines.push('   - `mcp__chrome-devtools__navigate_page` → navigate to target URL')
-  lines.push('   - `mcp__chrome-devtools__evaluate_script` → run the snippet')
-  lines.push('   - `mcp__chrome-devtools__get_console_message` → read results')
-  lines.push('4. Interpret results using the thresholds defined in the skill')
-  lines.push('5. Provide actionable recommendations based on findings')
-  lines.push('')
-
-  const content = lines.join('\n')
+  // Claude Code SKILL.md
+  const frontmatterLines = [
+    '---',
+    'name: webperf',
+    `description: ${metaDesc}`,
+    'context: fork',
+    `license: ${SKILL_METADATA.license}`,
+    'metadata:',
+    ...Object.entries(SKILL_METADATA.metadata).map(([k, v]) => `  ${k}: ${v}`),
+    '---',
+    '',
+  ]
+  const content = [...frontmatterLines, ...bodyLines].join('\n')
   fs.writeFileSync(path.join(skillDir, 'SKILL.md'), content)
   console.log(`  written: SKILL.md`)
+
+  // Gemini CLI
+  const geminiMetaDir = path.join(GEMINI_DIST_DIR, 'webperf')
+  fs.mkdirSync(geminiMetaDir, { recursive: true })
+  const geminiMetaDesc = metaDesc.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  const geminiMetaBody = bodyLines.join('\n').trim().replace(/"""/g, '\\"\\"\\"')
+  fs.writeFileSync(
+    path.join(geminiMetaDir, 'webperf.toml'),
+    `description = "${geminiMetaDesc}"\n\nprompt = """\n${geminiMetaBody}\n"""\n`
+  )
+  console.log(`  written: dist/gemini/webperf/webperf.toml`)
+
+  // Antigravity
+  const antigravityMetaDir = path.join(ANTIGRAVITY_DIST_DIR, 'webperf')
+  fs.mkdirSync(antigravityMetaDir, { recursive: true })
+  const antigravityMetaFrontmatter = [
+    '---',
+    'name: webperf',
+    `description: ${metaDesc}`,
+    'kind: inline',
+    'model: gemini-2.5-flash',
+    'temperature: 0.1',
+    'max_turns: 5',
+    `license: ${SKILL_METADATA.license}`,
+    'metadata:',
+    ...Object.entries(SKILL_METADATA.metadata).map(([k, v]) => `  ${k}: ${v}`),
+    '---',
+    '',
+  ]
+  fs.writeFileSync(
+    path.join(antigravityMetaDir, 'SKILL.md'),
+    [...antigravityMetaFrontmatter, ...bodyLines].join('\n')
+  )
+  console.log(`  written: dist/antigravity/webperf/SKILL.md`)
 }
 
 function validateSkill(name, description) {
@@ -476,7 +622,7 @@ async function main() {
   copyRecursive(SKILLS_DIR, CLAUDE_SKILLS_DIR)
   console.log('  copied to .claude/skills/')
 
-  console.log('\nDone! Skills generated in /skills/ and .claude/skills/')
+  console.log('\nDone! Skills generated in /skills/, .claude/skills/, dist/gemini/, and dist/antigravity/')
 }
 
 main().catch(console.error)

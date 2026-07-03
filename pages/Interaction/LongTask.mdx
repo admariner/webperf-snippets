@@ -1,5 +1,6 @@
 import snippet from '../../snippets/Interaction/LongTask.js?raw'
 import { Snippet } from '../../components/Snippet'
+import { Demo } from '../../components/Demo'
 
 # Long Tasks
 
@@ -87,22 +88,18 @@ flowchart LR
     style Block fill:#FFE5E5,stroke:#FF4444,stroke-width:2px
 ```
 
-**Severity Levels:**
+### Breaking Up Long Tasks
 
-```mermaid
-flowchart TB
-    Task[Long Task Duration] --> Check{How long?}
+Once a long task is detected, the fix is to _yield to the main thread_ so the browser can handle pending input between chunks of work. A common misconception is that `queueMicrotask` yields, it does not: microtasks run within the same task, so the main thread stays blocked. Only scheduling a new task (for example with `setTimeout`, or the newer `scheduler.yield()`) actually gives the browser a chance to respond.
 
-    Check -->|50-100ms| Low["🟢 Low Severity<br/><small>Minor delay</small>"]
-    Check -->|100-150ms| Medium["🟡 Medium Severity<br/><small>Noticeable lag</small>"]
-    Check -->|150-250ms| High["🟠 High Severity<br/><small>Poor responsiveness</small>"]
-    Check -->|> 250ms| Critical["🔴 Critical Severity<br/><small>Severe blocking</small>"]
+Step through the event loop to compare the three approaches:
 
-    style Low fill:#E5FFE5,stroke:#44AA44,stroke-width:2px
-    style Medium fill:#FFFBE5,stroke:#FFBB00,stroke-width:2px
-    style High fill:#FFF3E5,stroke:#FF8800,stroke-width:2px
-    style Critical fill:#FFE5E5,stroke:#FF4444,stroke-width:2px
-```
+<Demo
+  src="/demos/yield-pipeline.html"
+  title="Interactive visualization of the event loop comparing no yield, queueMicrotask, and setTimeout, and how each affects whether the main thread stays blocked"
+  caption="Switch between the three scenarios and step through each to see when the browser can process input."
+  heightKey="yieldDemoHeight"
+/>
 
 ### Limitations
 

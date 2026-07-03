@@ -1,5 +1,6 @@
 import snippet from '../../snippets/Interaction/Forced-Synchronous-Layout.js?raw'
 import { Snippet } from '../../components/Snippet'
+import { Demo } from '../../components/Demo'
 
 # Forced Synchronous Layout Detector
 
@@ -28,6 +29,14 @@ requestAnimationFrame(() => {         // 1st rAF: browser processes styles
   });
 });
 ```
+
+Step through the render pipeline to see _why_ the double `requestAnimationFrame` avoids the forced layout:
+
+<Demo
+  src="/demos/raf-pipeline.html"
+  title="Interactive visualization of the render pipeline and why two requestAnimationFrame calls are needed to avoid a Forced Synchronous Layout"
+  caption="Use the buttons to walk through the three scenarios step by step and see what happens in each phase of the frame."
+/>
 
 **What this snippet intercepts:**
 

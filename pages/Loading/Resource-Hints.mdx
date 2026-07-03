@@ -1,5 +1,6 @@
 import snippet from '../../snippets/Loading/Resource-Hints.js?raw'
 import { Snippet } from '../../components/Snippet'
+import { Demo } from '../../components/Demo'
 
 # Resource Hints
 
@@ -34,6 +35,17 @@ preload/modulepreload → preconnect → dns-prefetch → prefetch → prerender
 | Preconnect without usage | Wasted connection | Only preconnect to used origins |
 
 > **Tip:** Preload is for resources needed in the current page. Prefetch is for resources needed in future navigations. Don't confuse them!
+
+### Why Preconnect Helps
+
+`preconnect` pays off when a resource lives on a third-party origin: it moves the connection setup (DNS, TCP, TLS) off the critical path, so the request can start as soon as the resource is discovered. Step through the scenarios to compare connection reuse across HTTP versions and see what `preconnect` saves:
+
+<Demo
+  src="/demos/network-waterfall.html"
+  title="Interactive network waterfall comparing HTTP/1.1 with Connection: close, HTTP/1.1 keep-alive, HTTP/2, and HTTP/2 with preconnect"
+  caption="Switch between HTTP/1.1, keep-alive, HTTP/2, and HTTP/2 + preconnect to compare how each affects the request waterfall."
+  heightKey="netWaterfallHeight"
+/>
 
 ### Snippet
 

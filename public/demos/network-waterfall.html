@@ -573,7 +573,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e =
 
 // ─── Height notification ──────────────────────────────────────────────────────
 function notifyHeight() {
-  window.parent.postMessage({ netWaterfallHeight: document.body.offsetHeight }, '*');
+  window.parent.postMessage({ demoHeight: document.body.offsetHeight }, '*');
 }
 new ResizeObserver(notifyHeight).observe(document.body);
 </script>

@@ -535,7 +535,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e =
 // ─── Height notification ───────────────────────────────────────────────────────
 function notifyHeight() {
   const h = document.body.offsetHeight;
-  window.parent.postMessage({ rafDemoHeight: h }, '*');
+  window.parent.postMessage({ demoHeight: h }, '*');
 }
 new ResizeObserver(notifyHeight).observe(document.body);
 </script>

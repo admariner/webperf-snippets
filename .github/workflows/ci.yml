@@ -32,6 +32,9 @@ jobs:
       - name: Check consistency
         run: npm run check:consistency
 
+      - name: Check generated skills are up to date
+        run: npm run generate-skills:check
+
       - name: Run unit tests
         run: npm run test:unit --prefix cli
 

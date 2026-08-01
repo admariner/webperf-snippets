@@ -1,5 +1,6 @@
 import snippet from '../../snippets/Loading/Script-Loading.js?raw'
 import { Snippet } from '../../components/Snippet'
+import { Demo } from '../../components/Demo'
 
 # Scripts Loading
 
@@ -13,49 +14,11 @@ Render-blocking scripts in `<head>` without `async` or `defer` pause HTML parsin
 
 **How scripts affect HTML parsing:**
 
-```mermaid
-sequenceDiagram
-    participant Browser
-    participant Parser as HTML Parser
-    participant Script as Script
-
-    Note over Browser,Script: Normal <script> - Blocks Everything
-
-    Parser->>Script: Encounter <script>
-    Note over Parser: ⏸️ PAUSE parsing
-    Script->>Script: Download
-    Script->>Script: Execute
-    Note over Parser: ⏸️ Still waiting...
-    Script-->>Parser: Done
-    Note over Parser: ▶️ RESUME parsing
-
-    Note over Browser,Script: <script async> - Execute When Ready
-
-    Parser->>Script: Encounter <script async>
-    Note over Parser: ✅ Continue parsing
-    par Parallel Operations
-        Parser->>Parser: Keep parsing HTML
-    and
-        Script->>Script: Download in background
-    end
-    Script->>Parser: Ready to execute
-    Note over Parser: ⏸️ Brief pause
-    Script->>Script: Execute
-    Note over Parser: ▶️ Resume parsing
-
-    Note over Browser,Script: <script defer> - Execute After Parsing
-
-    Parser->>Script: Encounter <script defer>
-    Note over Parser: ✅ Continue parsing
-    par Parallel Operations
-        Parser->>Parser: Keep parsing HTML
-    and
-        Script->>Script: Download in background
-    end
-    Parser->>Parser: Finish parsing
-    Script->>Script: Execute (in order)
-    Note over Script: All defer scripts run before DOMContentLoaded
-```
+<Demo
+  src="/demos/script-loading-timeline.html"
+  title="Interactive timeline of how a normal, async, and defer script each affect HTML parsing, downloading, and execution"
+  caption="Switch between <script>, async, and defer, then step through to see when the parser blocks, when the script downloads, and when it executes."
+/>
 
 **Loading strategy comparison:**
 
